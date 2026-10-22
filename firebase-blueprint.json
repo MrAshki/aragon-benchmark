@@ -1,0 +1,532 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator user record for RBAC enforcement.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified administrator email address.",
+          "minLength": 3,
+          "maxLength": 256
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin record was created."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Customer operations support ticket.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "enum": ["delayed_delivery", "refund_request", "technical_issue", "damaged_item", "billing_dispute"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "investigating", "awaiting_approval", "resolved", "escalated", "rejected"]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "scenarioId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "orderId", "subject", "customerName", "category", "status", "priority", "scenarioId", "ownerId", "createdAt", "updatedAt"]
+    },
+    "TicketMessage": {
+      "title": "TicketMessage",
+      "description": "Message belonging to a ticket subcollection.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ticketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderRole": {
+          "type": "string",
+          "enum": ["customer", "agent", "operator", "system"]
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ticketId", "senderRole", "content", "ownerId", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "E-commerce order record queried and updated by backend tools.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": ["processing", "in_transit", "delivered", "delayed_disputed", "refunded", "replacement_sent"]
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "carrier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "trackingNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "itemsSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "refundedAmount": {
+          "type": "number"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "customerName", "status", "totalAmount", "currency", "carrier", "trackingNumber", "itemsSummary", "refundedAmount", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Policy": {
+      "title": "Policy",
+      "description": "Operations policy document evaluated by the Policy Analyst agent.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "titleFa": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "titleEn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "contentFa": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "contentEn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "maxRefundDays": {
+          "type": "number"
+        },
+        "maxAutoRefundAmount": {
+          "type": "number"
+        },
+        "requiresHumanApprovalOver": {
+          "type": "number"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "code", "titleFa", "titleEn", "contentFa", "contentEn", "maxRefundDays", "maxAutoRefundAmount", "requiresHumanApprovalOver", "ownerId", "createdAt"]
+    },
+    "WorkflowRun": {
+      "title": "WorkflowRun",
+      "description": "Persistent multi-agent graph execution state and summary trace.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ticketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["demo_deterministic", "live_ai"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["running", "paused_for_approval", "completed", "failed", "escalated"]
+        },
+        "currentNode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "retryCount": {
+          "type": "number"
+        },
+        "totalLatencyMs": {
+          "type": "number"
+        },
+        "estimatedCostUsd": {
+          "type": "number"
+        },
+        "summaryText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ticketId", "orderId", "mode", "status", "currentNode", "retryCount", "totalLatencyMs", "estimatedCostUsd", "summaryText", "ownerId", "createdAt", "updatedAt"]
+    },
+    "AgentEvent": {
+      "title": "AgentEvent",
+      "description": "Individual node execution trace event in a workflow run subcollection.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ticketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "agentName": {
+          "type": "string",
+          "enum": ["jev_router", "investigator", "policy_analyst", "resolution_planner", "verifier", "human_gate", "executor"]
+        },
+        "stepStatus": {
+          "type": "string",
+          "enum": ["started", "completed", "paused", "retried", "failed"]
+        },
+        "inputSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "outputSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "latencyMs": {
+          "type": "number"
+        },
+        "costUsd": {
+          "type": "number"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "runId", "ticketId", "agentName", "stepStatus", "inputSummary", "outputSummary", "latencyMs", "costUsd", "ownerId", "createdAt"]
+    },
+    "Approval": {
+      "title": "Approval",
+      "description": "Human-in-the-loop approval record for high-risk or financial actions.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ticketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "actionType": {
+          "type": "string",
+          "enum": ["issueSandboxRefund", "updateOrderStatus", "createReplyDraft", "escalateToSpecialist"]
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "reasonSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "reviewerNote": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "runId", "ticketId", "orderId", "actionType", "riskLevel", "reasonSummary", "status", "reviewerNote", "idempotencyKey", "ownerId", "createdAt", "updatedAt"]
+    },
+    "ExecutionResult": {
+      "title": "ExecutionResult",
+      "description": "Idempotent record of allowlisted server-side tool execution.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ticketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "toolName": {
+          "type": "string",
+          "enum": ["lookupOrder", "readTrackingHistory", "checkRefundEligibility", "issueSandboxRefund", "updateOrderStatus", "createReplyDraft"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["executed_sandbox", "blocked_unauthorized", "failed"]
+        },
+        "sandboxNotice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "idempotencyKey", "runId", "ticketId", "toolName", "status", "sandboxNotice", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Administrator registry for RBAC checks."
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Top-level customer operations tickets."
+    },
+    "/tickets/{ticketId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/TicketMessage" },
+      "description": "Subcollection of messages under a specific ticket."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "E-commerce order records."
+    },
+    "/policies/{policyId}": {
+      "schema": { "$ref": "#/entities/Policy" },
+      "description": "Company operational policies."
+    },
+    "/workflowRuns/{runId}": {
+      "schema": { "$ref": "#/entities/WorkflowRun" },
+      "description": "Orchestrated multi-agent workflow runs."
+    },
+    "/workflowRuns/{runId}/events/{eventId}": {
+      "schema": { "$ref": "#/entities/AgentEvent" },
+      "description": "Subcollection of agent execution trace steps for a workflow run."
+    },
+    "/approvals/{approvalId}": {
+      "schema": { "$ref": "#/entities/Approval" },
+      "description": "Human-in-the-loop approval items."
+    },
+    "/executionResults/{resultId}": {
+      "schema": { "$ref": "#/entities/ExecutionResult" },
+      "description": "Idempotent tool execution ledger."
+    }
+  }
+}

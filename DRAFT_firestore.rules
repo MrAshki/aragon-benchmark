@@ -1,0 +1,328 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'coinworkbook@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Blueprints (Pillar 2: Anti-Update-Gap)
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 256 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidTicket(data) {
+      return data.keys().hasAll(['id', 'orderId', 'subject', 'customerName', 'category', 'status', 'priority', 'scenarioId', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'orderId', 'subject', 'customerName', 'category', 'status', 'priority', 'scenarioId', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.orderId is string && data.orderId.size() >= 1 && data.orderId.size() <= 128 &&
+        data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 300 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+        data.category is string && data.category.size() <= 40 && data.category in ['delayed_delivery', 'refund_request', 'technical_issue', 'damaged_item', 'billing_dispute'] &&
+        data.status is string && data.status.size() <= 40 && data.status in ['open', 'investigating', 'awaiting_approval', 'resolved', 'escalated', 'rejected'] &&
+        data.priority is string && data.priority.size() <= 20 && data.priority in ['low', 'medium', 'high', 'critical'] &&
+        data.scenarioId is string && data.scenarioId.size() >= 1 && data.scenarioId.size() <= 64 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTicketMessage(data) {
+      return data.keys().hasAll(['id', 'ticketId', 'senderRole', 'content', 'ownerId', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'ticketId', 'senderRole', 'content', 'ownerId', 'createdAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ticketId is string && data.ticketId.size() >= 1 && data.ticketId.size() <= 128 && data.ticketId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.senderRole is string && data.senderRole.size() <= 20 && data.senderRole in ['customer', 'agent', 'operator', 'system'] &&
+        data.content is string && data.content.size() >= 1 && data.content.size() <= 4000 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'customerName', 'status', 'totalAmount', 'currency', 'carrier', 'trackingNumber', 'itemsSummary', 'refundedAmount', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'customerName', 'status', 'totalAmount', 'currency', 'carrier', 'trackingNumber', 'itemsSummary', 'refundedAmount', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+        data.status is string && data.status.size() <= 40 && data.status in ['processing', 'in_transit', 'delivered', 'delayed_disputed', 'refunded', 'replacement_sent'] &&
+        data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 1000000 &&
+        data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 16 &&
+        data.carrier is string && data.carrier.size() >= 1 && data.carrier.size() <= 80 &&
+        data.trackingNumber is string && data.trackingNumber.size() >= 1 && data.trackingNumber.size() <= 80 &&
+        data.itemsSummary is string && data.itemsSummary.size() >= 1 && data.itemsSummary.size() <= 1000 &&
+        data.refundedAmount is number && data.refundedAmount >= 0 && data.refundedAmount <= 1000000 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPolicy(data) {
+      return data.keys().hasAll(['id', 'code', 'titleFa', 'titleEn', 'contentFa', 'contentEn', 'maxRefundDays', 'maxAutoRefundAmount', 'requiresHumanApprovalOver', 'ownerId', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'code', 'titleFa', 'titleEn', 'contentFa', 'contentEn', 'maxRefundDays', 'maxAutoRefundAmount', 'requiresHumanApprovalOver', 'ownerId', 'createdAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 64 &&
+        data.titleFa is string && data.titleFa.size() >= 1 && data.titleFa.size() <= 200 &&
+        data.titleEn is string && data.titleEn.size() >= 1 && data.titleEn.size() <= 200 &&
+        data.contentFa is string && data.contentFa.size() >= 1 && data.contentFa.size() <= 4000 &&
+        data.contentEn is string && data.contentEn.size() >= 1 && data.contentEn.size() <= 4000 &&
+        data.maxRefundDays is number && data.maxRefundDays >= 0 && data.maxRefundDays <= 365 &&
+        data.maxAutoRefundAmount is number && data.maxAutoRefundAmount >= 0 && data.maxAutoRefundAmount <= 100000 &&
+        data.requiresHumanApprovalOver is number && data.requiresHumanApprovalOver >= 0 && data.requiresHumanApprovalOver <= 100000 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidWorkflowRun(data) {
+      return data.keys().hasAll(['id', 'ticketId', 'orderId', 'mode', 'status', 'currentNode', 'retryCount', 'totalLatencyMs', 'estimatedCostUsd', 'summaryText', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ticketId', 'orderId', 'mode', 'status', 'currentNode', 'retryCount', 'totalLatencyMs', 'estimatedCostUsd', 'summaryText', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ticketId is string && data.ticketId.size() >= 1 && data.ticketId.size() <= 128 && data.ticketId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.orderId is string && data.orderId.size() >= 1 && data.orderId.size() <= 128 &&
+        data.mode is string && data.mode.size() <= 32 && data.mode in ['demo_deterministic', 'live_ai'] &&
+        data.status is string && data.status.size() <= 32 && data.status in ['running', 'paused_for_approval', 'completed', 'failed', 'escalated'] &&
+        data.currentNode is string && data.currentNode.size() >= 1 && data.currentNode.size() <= 64 &&
+        data.retryCount is number && data.retryCount >= 0 && data.retryCount <= 10 &&
+        data.totalLatencyMs is number && data.totalLatencyMs >= 0 && data.totalLatencyMs <= 600000 &&
+        data.estimatedCostUsd is number && data.estimatedCostUsd >= 0 && data.estimatedCostUsd <= 100 &&
+        data.summaryText is string && data.summaryText.size() >= 1 && data.summaryText.size() <= 2000 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAgentEvent(data) {
+      return data.keys().hasAll(['id', 'runId', 'ticketId', 'agentName', 'stepStatus', 'inputSummary', 'outputSummary', 'latencyMs', 'costUsd', 'ownerId', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'runId', 'ticketId', 'agentName', 'stepStatus', 'inputSummary', 'outputSummary', 'latencyMs', 'costUsd', 'ownerId', 'createdAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.runId is string && data.runId.size() >= 1 && data.runId.size() <= 128 && data.runId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ticketId is string && data.ticketId.size() >= 1 && data.ticketId.size() <= 128 &&
+        data.agentName is string && data.agentName.size() <= 32 && data.agentName in ['jev_router', 'investigator', 'policy_analyst', 'resolution_planner', 'verifier', 'human_gate', 'executor'] &&
+        data.stepStatus is string && data.stepStatus.size() <= 32 && data.stepStatus in ['started', 'completed', 'paused', 'retried', 'failed'] &&
+        data.inputSummary is string && data.inputSummary.size() >= 1 && data.inputSummary.size() <= 2000 &&
+        data.outputSummary is string && data.outputSummary.size() >= 1 && data.outputSummary.size() <= 2000 &&
+        data.latencyMs is number && data.latencyMs >= 0 && data.latencyMs <= 600000 &&
+        data.costUsd is number && data.costUsd >= 0 && data.costUsd <= 100 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidApproval(data) {
+      return data.keys().hasAll(['id', 'runId', 'ticketId', 'orderId', 'actionType', 'riskLevel', 'reasonSummary', 'status', 'reviewerNote', 'idempotencyKey', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'runId', 'ticketId', 'orderId', 'actionType', 'riskLevel', 'reasonSummary', 'status', 'reviewerNote', 'idempotencyKey', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.runId is string && data.runId.size() >= 1 && data.runId.size() <= 128 && data.runId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ticketId is string && data.ticketId.size() >= 1 && data.ticketId.size() <= 128 && data.ticketId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.orderId is string && data.orderId.size() >= 1 && data.orderId.size() <= 128 &&
+        data.actionType is string && data.actionType.size() <= 40 && data.actionType in ['issueSandboxRefund', 'updateOrderStatus', 'createReplyDraft', 'escalateToSpecialist'] &&
+        data.riskLevel is string && data.riskLevel.size() <= 20 && data.riskLevel in ['low', 'medium', 'high', 'critical'] &&
+        data.reasonSummary is string && data.reasonSummary.size() >= 1 && data.reasonSummary.size() <= 1000 &&
+        data.status is string && data.status.size() <= 20 && data.status in ['pending', 'approved', 'rejected'] &&
+        data.reviewerNote is string && data.reviewerNote.size() <= 1000 &&
+        data.idempotencyKey is string && data.idempotencyKey.size() >= 1 && data.idempotencyKey.size() <= 128 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidExecutionResult(data) {
+      return data.keys().hasAll(['id', 'idempotencyKey', 'runId', 'ticketId', 'toolName', 'status', 'sandboxNotice', 'ownerId', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'idempotencyKey', 'runId', 'ticketId', 'toolName', 'status', 'sandboxNotice', 'ownerId', 'createdAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.idempotencyKey is string && data.idempotencyKey.size() >= 1 && data.idempotencyKey.size() <= 128 &&
+        data.runId is string && data.runId.size() >= 1 && data.runId.size() <= 128 && data.runId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ticketId is string && data.ticketId.size() >= 1 && data.ticketId.size() <= 128 && data.ticketId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.toolName is string && data.toolName.size() <= 40 && data.toolName in ['lookupOrder', 'readTrackingHistory', 'checkRefundEligibility', 'issueSandboxRefund', 'updateOrderStatus', 'createReplyDraft'] &&
+        data.status is string && data.status.size() <= 32 && data.status in ['executed_sandbox', 'blocked_unauthorized', 'failed'] &&
+        data.sandboxNotice is string && data.sandboxNotice.size() >= 1 && data.sandboxNotice.size() <= 500 &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    // 1. /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if isSignedIn() && isAdmin() && existing().uid == request.auth.uid;
+      allow create: if isSignedIn() && isVerified() && isValidId(adminId) && isValidAdmin(incoming()) &&
+        adminId == request.auth.uid &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+      allow update, delete: if false;
+    }
+
+    // 2. /tickets/{ticketId}
+    match /tickets/{ticketId} {
+      allow get: if isSignedIn() && isValidId(ticketId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(ticketId) && isValidTicket(incoming()) &&
+        incoming().id == ticketId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(ticketId) && isValidTicket(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() || (
+            existing().ownerId == request.auth.uid &&
+            !(existing().status in ['resolved', 'rejected']) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'priority', 'updatedAt'])
+          )
+        );
+      allow delete: if isSignedIn() && isValidId(ticketId) && isAdmin();
+
+      // 3. /tickets/{ticketId}/messages/{messageId} (Pillar 1 Master Gate)
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(ticketId) && isValidId(messageId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          get(/databases/$(database)/documents/tickets/$(ticketId)).data.ownerId == request.auth.uid;
+        allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+        allow create: if isSignedIn() && isVerified() && isValidId(ticketId) && isValidId(messageId) && isValidTicketMessage(incoming()) &&
+          incoming().id == messageId &&
+          incoming().ticketId == ticketId &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/tickets/$(ticketId)) &&
+          get(/databases/$(database)/documents/tickets/$(ticketId)).data.ownerId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // 4. /orders/{orderId}
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(orderId) && isValidOrder(incoming()) &&
+        incoming().id == orderId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isVerified() && isValidId(orderId) && isValidOrder(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() || (
+            existing().ownerId == request.auth.uid &&
+            existing().status != 'refunded' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'refundedAmount', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // 5. /policies/{policyId}
+    match /policies/{policyId} {
+      allow get: if isSignedIn() && isValidId(policyId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(policyId) && isValidPolicy(incoming()) &&
+        incoming().id == policyId &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // 6. /workflowRuns/{runId}
+    match /workflowRuns/{runId} {
+      allow get: if isSignedIn() && isValidId(runId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(runId) && isValidWorkflowRun(incoming()) &&
+        incoming().id == runId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/tickets/$(incoming().ticketId)) &&
+        get(/databases/$(database)/documents/tickets/$(incoming().ticketId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isVerified() && isValidId(runId) && isValidWorkflowRun(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ticketId == existing().ticketId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() || (
+            existing().ownerId == request.auth.uid &&
+            !(existing().status in ['completed', 'failed']) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'currentNode', 'retryCount', 'totalLatencyMs', 'estimatedCostUsd', 'summaryText', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+
+      // 7. /workflowRuns/{runId}/events/{eventId} (Pillar 1 Master Gate)
+      match /events/{eventId} {
+        allow get: if isSignedIn() && isValidId(runId) && isValidId(eventId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          get(/databases/$(database)/documents/workflowRuns/$(runId)).data.ownerId == request.auth.uid;
+        allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+        allow create: if isSignedIn() && isVerified() && isValidId(runId) && isValidId(eventId) && isValidAgentEvent(incoming()) &&
+          incoming().id == eventId &&
+          incoming().runId == runId &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/workflowRuns/$(runId)) &&
+          get(/databases/$(database)/documents/workflowRuns/$(runId)).data.ownerId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // 8. /approvals/{approvalId}
+    match /approvals/{approvalId} {
+      allow get: if isSignedIn() && isValidId(approvalId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(approvalId) && isValidApproval(incoming()) &&
+        incoming().id == approvalId &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/workflowRuns/$(incoming().runId)) &&
+        get(/databases/$(database)/documents/workflowRuns/$(incoming().runId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isVerified() && isValidId(approvalId) && isValidApproval(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().runId == existing().runId &&
+        incoming().ticketId == existing().ticketId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() || (
+            existing().ownerId == request.auth.uid &&
+            existing().status == 'pending' &&
+            incoming().status in ['approved', 'rejected'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'reviewerNote', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // 9. /executionResults/{resultId}
+    match /executionResults/{resultId} {
+      allow get: if isSignedIn() && isValidId(resultId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerified() && isValidId(resultId) && isValidExecutionResult(incoming()) &&
+        incoming().id == resultId &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/workflowRuns/$(incoming().runId)) &&
+        get(/databases/$(database)/documents/workflowRuns/$(incoming().runId)).data.ownerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

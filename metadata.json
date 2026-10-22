@@ -1,0 +1,6 @@
+{
+  "name": "AgentOps — Autonomous Operations Command Center",
+  "description": "Multi-agent customer operations command center with LangGraph orchestration, Jev & Gemini 4 Argon routing, policy verification, human-in-the-loop approvals, and Firestore persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
